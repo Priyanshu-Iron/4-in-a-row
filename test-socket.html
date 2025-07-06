@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket Test</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Socket Connection Test</h1>
+    <div id="status">Connecting...</div>
+    <button onclick="testJoin()">Test Join Game</button>
+    <div id="logs"></div>
+
+    <script>
+        const socket = io('http://localhost:3001');
+        const statusDiv = document.getElementById('status');
+        const logsDiv = document.getElementById('logs');
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logsDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            console.log(message);
+        }
+
+        socket.on('connect', () => {
+            log('✅ Connected to server');
+            statusDiv.textContent = 'Connected';
+            statusDiv.style.color = 'green';
+        });
+
+        socket.on('disconnect', (reason) => {
+            log('❌ Disconnected: ' + reason);
+            statusDiv.textContent = 'Disconnected';
+            statusDiv.style.color = 'red';
+        });
+
+        socket.on('connect_error', (error) => {
+            log('❌ Connection error: ' + error.message);
+            statusDiv.textContent = 'Connection Error';
+            statusDiv.style.color = 'red';
+        });
+
+        socket.on('waiting_for_opponent', (data) => {
+            log('🎮 Waiting for opponent: ' + JSON.stringify(data));
+        });
+
+        socket.on('game_started', (data) => {
+            log('🎮 Game started: ' + JSON.stringify(data));
+        });
+
+        socket.on('error', (error) => {
+            log('❌ Error: ' + JSON.stringify(error));
+        });
+
+        function testJoin() {
+            log('🎮 Testing join game with username: testuser');
+            socket.emit('join_game', { username: 'testuser' });
+        }
+    </script>
+</body>
+</html> 

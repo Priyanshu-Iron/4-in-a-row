@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom animations and additional styles */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+}
+
+@layer components {
+  .game-cell {
+    transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: 0 2px 8px 0 rgba(80,0,120,0.08), 0 1.5px 4px 0 rgba(0,0,0,0.04);
+    outline: none;
+  }
+  .game-cell:focus {
+    box-shadow: 0 0 0 3px #a5b4fc, 0 2px 8px 0 rgba(80,0,120,0.08);
+    border-color: #6366f1;
+    z-index: 2;
+  }
+  .game-cell.winning-cell {
+    animation: pulse 1s infinite;
+    border-color: #f472b6;
+    box-shadow: 0 0 16px 4px #f472b6;
+  }
+}
+
+@layer utilities {
+  .animate-drop {
+    animation: drop 0.5s cubic-bezier(0.4,0,0.2,1);
+  }
+}
+
+@keyframes drop {
+  0% {
+    transform: translateY(-100px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+} 

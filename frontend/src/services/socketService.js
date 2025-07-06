@@ -1,0 +1,185 @@
+import io from 'socket.io-client';
+
+class SocketService {
+  constructor() {
+    this.socket = null;
+    this.connected = false;
+    this.listeners = new Map();
+  }
+
+  connect(serverUrl = 'http://localhost:3001') {
+    if (this.socket && this.socket.connected) {
+      console.log('🔌 Socket already connected, reusing existing connection');
+      return this.socket;
+    }
+
+    if (this.socket) {
+      console.log('🔌 Disconnecting existing socket before creating new one');
+      this.socket.disconnect();
+    }
+
+    console.log('🔌 Creating new socket connection to:', serverUrl);
+    this.socket = io(serverUrl, {
+      autoConnect: true,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      timeout: 20000,
+      transports: ['websocket', 'polling']
+    });
+
+    this.socket.on('connect', () => {
+      console.log('🔌 Connected to game server');
+      this.connected = true;
+    });
+
+    this.socket.on('disconnect', (reason) => {
+      console.log('🔌 Disconnected from game server:', reason);
+      this.connected = false;
+    });
+
+    this.socket.on('connect_error', (error) => {
+      console.error('🔌 Connection error:', error);
+      this.connected = false;
+    });
+
+    this.socket.on('reconnect', (attemptNumber) => {
+      console.log('🔌 Reconnected to game server after', attemptNumber, 'attempts');
+      this.connected = true;
+    });
+
+    this.socket.on('reconnect_error', (error) => {
+      console.error('🔌 Reconnection error:', error);
+    });
+
+    this.socket.on('reconnect_failed', () => {
+      console.error('🔌 Reconnection failed after all attempts');
+      this.connected = false;
+    });
+
+    return this.socket;
+  }
+
+  disconnect() {
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+      this.connected = false;
+      this.listeners.clear();
+    }
+  }
+
+  // Game methods
+  joinGame(username) {
+    console.log('🎮 Attempting to join game with username:', username);
+    console.log('🔌 Socket connected:', this.socket?.connected);
+    console.log('🔌 Connection status:', this.connected);
+    
+    if (this.socket && this.socket.connected) {
+      console.log('🎮 Emitting join_game event');
+      this.socket.emit('join_game', { username });
+    } else {
+      console.error('🎮 Cannot join game: socket not connected');
+    }
+  }
+
+  makeMove(gameId, column) {
+    if (this.socket) {
+      this.socket.emit('make_move', { gameId, column });
+    }
+  }
+
+  reconnectToGame(username, gameId = null) {
+    if (this.socket) {
+      this.socket.emit('reconnect_game', { username, gameId });
+    }
+  }
+
+  getLeaderboard() {
+    if (this.socket) {
+      this.socket.emit('get_leaderboard');
+    }
+  }
+
+  getUserStats(username) {
+    if (this.socket) {
+      this.socket.emit('get_user_stats', { username });
+    }
+  }
+
+  // Event listeners
+  on(event, callback) {
+    if (this.socket) {
+      this.socket.on(event, callback);
+      
+      // Store callback for cleanup
+      if (!this.listeners.has(event)) {
+        this.listeners.set(event, []);
+      }
+      this.listeners.get(event).push(callback);
+    }
+  }
+
+  off(event, callback) {
+    if (this.socket) {
+      this.socket.off(event, callback);
+      
+      // Remove from stored callbacks
+      if (this.listeners.has(event)) {
+        const callbacks = this.listeners.get(event);
+        const index = callbacks.indexOf(callback);
+        if (index > -1) {
+          callbacks.splice(index, 1);
+        }
+      }
+    }
+  }
+
+  removeAllListeners(event) {
+    if (this.socket) {
+      this.socket.removeAllListeners(event);
+      this.listeners.delete(event);
+    }
+  }
+
+  isConnected() {
+    return this.connected && this.socket?.connected;
+  }
+
+  // Convenience methods for common events
+  onWaitingForOpponent(callback) {
+    this.on('waiting_for_opponent', callback);
+  }
+
+  onGameStarted(callback) {
+    this.on('game_started', callback);
+  }
+
+  onGameUpdate(callback) {
+    this.on('game_update', callback);
+  }
+
+  onGameReconnected(callback) {
+    this.on('game_reconnected', callback);
+  }
+
+  onPlayerNumber(callback) {
+    this.on('your_player_number', callback);
+  }
+
+  onLeaderboard(callback) {
+    this.on('leaderboard', callback);
+  }
+
+  onUserStats(callback) {
+    this.on('user_stats', callback);
+  }
+
+  onError(callback) {
+    this.on('error', callback);
+  }
+}
+
+// Create and export singleton instance
+const socketService = new SocketService();
+export default socketService; 
