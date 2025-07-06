@@ -5,9 +5,10 @@ class SocketService {
     this.socket = null;
     this.connected = false;
     this.listeners = new Map();
+    this.serverUrl = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
   }
 
-  connect(serverUrl = 'http://localhost:3001') {
+  connect() {
     if (this.socket && this.socket.connected) {
       console.log('🔌 Socket already connected, reusing existing connection');
       return this.socket;
@@ -18,14 +19,15 @@ class SocketService {
       this.socket.disconnect();
     }
 
-    console.log('🔌 Creating new socket connection to:', serverUrl);
-    this.socket = io(serverUrl, {
+    console.log('🔌 Creating new socket connection to:', this.serverUrl);
+    this.socket = io(this.serverUrl, {
       autoConnect: true,
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
       timeout: 20000,
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      withCredentials: true
     });
 
     this.socket.on('connect', () => {
@@ -69,50 +71,49 @@ class SocketService {
     }
   }
 
-  // Game methods
-  joinGame(username) {
-    console.log('🎮 Attempting to join game with username:', username);
+  joinGame(username, vsBot = false) {
+    console.log('🎮 Attempting to join game with username:', username, 'vsBot:', vsBot);
     console.log('🔌 Socket connected:', this.socket?.connected);
     console.log('🔌 Connection status:', this.connected);
     
     if (this.socket && this.socket.connected) {
       console.log('🎮 Emitting join_game event');
-      this.socket.emit('join_game', { username });
+      this.socket.emit('join_game', { username, vsBot });
     } else {
       console.error('🎮 Cannot join game: socket not connected');
+      throw new Error('Socket not connected');
     }
   }
 
   makeMove(gameId, column) {
-    if (this.socket) {
+    if (this.socket && this.socket.connected) {
       this.socket.emit('make_move', { gameId, column });
+    } else {
+      throw new Error('Socket not connected');
     }
   }
 
   reconnectToGame(username, gameId = null) {
-    if (this.socket) {
+    if (this.socket && this.socket.connected) {
       this.socket.emit('reconnect_game', { username, gameId });
     }
   }
 
   getLeaderboard() {
-    if (this.socket) {
+    if (this.socket && this.socket.connected) {
       this.socket.emit('get_leaderboard');
     }
   }
 
   getUserStats(username) {
-    if (this.socket) {
+    if (this.socket && this.socket.connected) {
       this.socket.emit('get_user_stats', { username });
     }
   }
 
-  // Event listeners
   on(event, callback) {
     if (this.socket) {
       this.socket.on(event, callback);
-      
-      // Store callback for cleanup
       if (!this.listeners.has(event)) {
         this.listeners.set(event, []);
       }
@@ -123,8 +124,6 @@ class SocketService {
   off(event, callback) {
     if (this.socket) {
       this.socket.off(event, callback);
-      
-      // Remove from stored callbacks
       if (this.listeners.has(event)) {
         const callbacks = this.listeners.get(event);
         const index = callbacks.indexOf(callback);
@@ -146,7 +145,6 @@ class SocketService {
     return this.connected && this.socket?.connected;
   }
 
-  // Convenience methods for common events
   onWaitingForOpponent(callback) {
     this.on('waiting_for_opponent', callback);
   }
@@ -180,6 +178,5 @@ class SocketService {
   }
 }
 
-// Create and export singleton instance
 const socketService = new SocketService();
-export default socketService; 
+export default socketService;

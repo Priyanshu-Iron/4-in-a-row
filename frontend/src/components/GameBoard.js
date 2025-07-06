@@ -12,7 +12,7 @@ function getAvatar(name, idx) {
   );
 }
 
-const GameBoard = ({ game, username, playerNumber, onMakeMove, onNewGame, onShowStats }) => {
+const GameBoard = ({ game, username, playerNumber, onMakeMove, onRequestNewGame, onShowStats }) => {
   const [dropAnim, setDropAnim] = useState({});
   const boardRef = useRef(null);
   const prevBoard = useRef(game ? JSON.stringify(game.board) : '');
@@ -60,6 +60,7 @@ const GameBoard = ({ game, username, playerNumber, onMakeMove, onNewGame, onShow
   const handleColumnClick = (col) => {
     if (!game) return;
     const { board, currentPlayer, gameStatus } = game;
+    console.log('[GameBoard] handleColumnClick', { col, playerNumber, currentPlayer, gameStatus, topCell: board[0][col] });
     const isMyTurn = currentPlayer === playerNumber && gameStatus === 'active';
     const isGameOver = gameStatus !== 'active';
     if (isMyTurn && !isGameOver && board[0][col] === 0) {
@@ -150,7 +151,7 @@ const GameBoard = ({ game, username, playerNumber, onMakeMove, onNewGame, onShow
               <span>Stats</span>
             </button>
             <button
-              onClick={onNewGame}
+              onClick={onRequestNewGame}
               className="flex items-center space-x-2 px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm font-semibold"
             >
               <RotateCcw className="h-4 w-4" />

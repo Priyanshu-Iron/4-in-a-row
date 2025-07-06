@@ -37,7 +37,7 @@ class GameManager {
   }
 
   // Handle player joining game
-  async handleJoinGame(socket, { username }) {
+  async handleJoinGame(socket, { username, vsBot }) {
     if (!username || username.trim() === '') {
       socket.emit('error', { message: 'Username is required' });
       return;
@@ -64,6 +64,12 @@ class GameManager {
     this.playerSockets.set(username, socket.id);
     this.socketPlayers.set(socket.id, username);
     
+    // If vsBot is true, immediately create a game with the bot
+    if (vsBot) {
+      await this.createGame({ username, socketId: socket.id }, { username: 'Bot', socketId: null });
+      return;
+    }
+
     // Add to waiting players
     this.waitingPlayers.set(socket.id, {
       username,
@@ -367,6 +373,9 @@ class GameManager {
       player2: player2.username,
       board: gameLogic.board,
       currentPlayer: gameLogic.currentPlayer,
+      gameStatus: gameLogic.gameStatus,
+      winner: gameLogic.winner,
+      winningCells: gameLogic.winningCells,
       yourPlayer: null // Will be set individually below
     });
 

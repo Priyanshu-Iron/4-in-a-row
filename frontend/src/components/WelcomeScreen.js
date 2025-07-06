@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { Play, Trophy, Users, Gamepad2 } from 'lucide-react';
 
-const WelcomeScreen = ({ onJoinGame, onShowLeaderboard, connectionStatus, isLoading }) => {
+const WelcomeScreen = ({ onJoinGame, onShowLeaderboard, connectionStatus, isLoading, onRetryConnect }) => {
   const [username, setUsername] = useState('');
+
+  const isConnecting = connectionStatus === 'connecting';
+  const isReconnecting = connectionStatus === 'reconnecting';
+  const isDisconnected = connectionStatus === 'disconnected';
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -12,8 +16,31 @@ const WelcomeScreen = ({ onJoinGame, onShowLeaderboard, connectionStatus, isLoad
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8">
-      <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
+    <div className="flex flex-col items-center justify-center min-h-screen p-8 relative">
+      {/* Overlay spinner when connecting or reconnecting */}
+      {(isConnecting || isReconnecting) && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-white bg-opacity-80">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-600 mb-4"></div>
+            <span className="text-lg font-semibold text-indigo-700">
+              {isConnecting ? 'Connecting to server...' : 'Reconnecting to server...'}
+            </span>
+          </div>
+        </div>
+      )}
+      {/* Retry button overlay if disconnected */}
+      {isDisconnected && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-white bg-opacity-90">
+          <div className="mb-4 text-lg font-semibold text-red-700">Disconnected from server</div>
+          <button
+            onClick={onRetryConnect}
+            className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-bold text-lg hover:bg-indigo-700 transition-colors shadow-lg"
+          >
+            Retry Connection
+          </button>
+        </div>
+      )}
+      <div className={`bg-white rounded-xl shadow-2xl p-8 max-w-md w-full ${(isConnecting || isReconnecting || isDisconnected) ? 'opacity-50 pointer-events-none' : ''}`}>
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">

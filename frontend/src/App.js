@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import socketService from './services/socketService';
@@ -6,10 +6,12 @@ import WelcomeScreen from './components/WelcomeScreen';
 import GameBoard from './components/GameBoard';
 import Leaderboard from './components/Leaderboard';
 import UserStats from './components/UserStats';
+import ErrorBoundary from './components/ErrorBoundary';
 import { Users, Trophy, BarChart3, Gamepad2 } from 'lucide-react';
+import NewGameModal from './components/NewGameModal';
 
 function App() {
-  const [gameState, setGameState] = useState('welcome'); // 'welcome', 'waiting', 'playing', 'leaderboard', 'stats'
+  const [gameState, setGameState] = useState('welcome');
   const [username, setUsername] = useState('');
   const [currentGame, setCurrentGame] = useState(null);
   const [playerNumber, setPlayerNumber] = useState(null);
@@ -17,9 +19,12 @@ function App() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [userStats, setUserStats] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  const [showNewGameModal, setShowNewGameModal] = useState(false);
+  const connectionTimeoutRef = useRef(null);
+  const [waitingMode, setWaitingMode] = useState(null); // 'bot' | 'player' | null
 
   useEffect(() => {
-    // Connect to socket server
     try {
       socketService.connect();
     } catch (error) {
@@ -28,32 +33,44 @@ function App() {
       setConnectionStatus('disconnected');
     }
 
-    // Set up socket event listeners
     socketService.on('connect', () => {
-      console.log('✅ Frontend: Socket connected successfully');
       setConnectionStatus('connected');
       toast.success('Connected to game server!');
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
+      }
     });
 
     socketService.on('disconnect', () => {
-      console.log('❌ Frontend: Socket disconnected');
       setConnectionStatus('disconnected');
       setIsLoading(false);
       toast.error('Disconnected from server');
     });
 
+    if (socketService.socket) {
+      socketService.socket.on('reconnect_attempt', () => {
+        setConnectionStatus('reconnecting');
+        toast.info('Reconnecting to server...');
+      });
+      socketService.socket.on('reconnect_failed', () => {
+        setConnectionStatus('disconnected');
+        toast.error('Reconnection failed. Please check your connection and retry.');
+      });
+    }
+
     socketService.onWaitingForOpponent((data) => {
-      console.log('🎮 Frontend: Received waiting_for_opponent event:', data);
       setGameState('waiting');
       setIsLoading(false);
+      setWaitingMode('player');
       toast.info('Waiting for opponent... Bot will join in 10 seconds if no player found.');
     });
 
     socketService.onGameStarted((data) => {
-      console.log('🎮 Frontend: Received game_started event:', data);
       setCurrentGame(data);
       setGameState('playing');
       setIsLoading(false);
+      setWaitingMode(null);
       toast.success(`Game started! Playing against ${data.player2}`);
     });
 
@@ -63,11 +80,13 @@ function App() {
 
     socketService.onGameUpdate((data) => {
       setCurrentGame(prev => ({ ...prev, ...data }));
-      
       if (data.gameStatus === 'won') {
-        const winner = data.winner;
-        if (winner === username) {
+        const winner = String(data.winner || '').toLowerCase();
+        const user = String(username || '').toLowerCase();
+        if (winner === user) {
           toast.success('🎉 You won!');
+        } else if (winner === 'bot' && user !== 'bot') {
+          toast.info('🤖 Bot wins! Better luck next time!');
         } else {
           toast.error('😞 You lost!');
         }
@@ -98,20 +117,28 @@ function App() {
       toast.error(error.message || 'An error occurred');
     });
 
-    // Set a timeout to show connection error if it takes too long
-    const connectionTimeout = setTimeout(() => {
+    if (connectionTimeoutRef.current) {
+      clearTimeout(connectionTimeoutRef.current);
+    }
+    connectionTimeoutRef.current = setTimeout(() => {
       if (connectionStatus === 'connecting') {
         setConnectionStatus('disconnected');
         toast.error('Connection timeout. Please check if the server is running.');
       }
-    }, 10000); // 10 seconds timeout
+    }, 10000);
 
     return () => {
-      clearTimeout(connectionTimeout);
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
+      }
+      if (socketService.socket) {
+        socketService.socket.off('reconnect_attempt');
+        socketService.socket.off('reconnect_failed');
+      }
     };
-  }, []); // Remove username from dependency array
+  }, [retryKey]);
 
-  // Cleanup effect that only runs on unmount
   useEffect(() => {
     return () => {
       socketService.disconnect();
@@ -119,21 +146,16 @@ function App() {
   }, []);
 
   const handleJoinGame = (enteredUsername) => {
-    console.log('🎮 Frontend: handleJoinGame called with username:', enteredUsername);
-    console.log('🔌 Frontend: Connection status:', connectionStatus);
-    
     if (!enteredUsername.trim()) {
       toast.error('Please enter a username');
       return;
     }
 
     if (connectionStatus !== 'connected') {
-      console.log('❌ Frontend: Cannot join game - not connected');
       toast.error('Not connected to server. Please wait.');
       return;
     }
 
-    console.log('✅ Frontend: Proceeding with join game');
     setIsLoading(true);
     setUsername(enteredUsername.trim());
     
@@ -147,6 +169,7 @@ function App() {
   };
 
   const handleMakeMove = (column) => {
+    console.log('[App] handleMakeMove', { currentGame, playerNumber, column });
     if (currentGame && currentGame.gameId) {
       try {
         socketService.makeMove(currentGame.gameId, column);
@@ -184,6 +207,35 @@ function App() {
     setGameState('welcome');
   };
 
+  const handleRetryConnect = () => {
+    setConnectionStatus('connecting');
+    setRetryKey(prev => prev + 1);
+  };
+
+  const handleRequestNewGame = () => {
+    setShowNewGameModal(true);
+  };
+
+  const handleCloseNewGameModal = () => {
+    setShowNewGameModal(false);
+  };
+
+  const handlePlayWithBot = () => {
+    setShowNewGameModal(false);
+    setGameState('waiting');
+    setIsLoading(true);
+    setWaitingMode('bot');
+    socketService.joinGame(username || 'Player', true);
+  };
+
+  const handlePlayWithPlayer = () => {
+    setShowNewGameModal(false);
+    setGameState('waiting');
+    setIsLoading(true);
+    setWaitingMode('player');
+    socketService.joinGame(username || 'Player');
+  };
+
   const renderCurrentScreen = () => {
     switch (gameState) {
       case 'welcome':
@@ -193,42 +245,61 @@ function App() {
             onShowLeaderboard={handleShowLeaderboard}
             connectionStatus={connectionStatus}
             isLoading={isLoading}
+            onRetryConnect={handleRetryConnect}
           />
         );
-      
       case 'waiting':
-        return (
-          <div className="flex flex-col items-center justify-center min-h-screen p-8">
-            <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full text-center">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-6"></div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Finding Opponent...</h2>
-              <p className="text-gray-600 mb-4">Player: <span className="font-semibold text-indigo-600">{username}</span></p>
-              <p className="text-sm text-gray-500">
-                Searching for another player. If no player joins within 10 seconds, 
-                you'll be matched with our competitive bot!
-              </p>
-              <button
-                onClick={handleNewGame}
-                className="mt-6 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                Cancel
-              </button>
+        if (waitingMode === 'bot') {
+          return (
+            <div className="flex flex-col items-center justify-center min-h-screen p-4 sm:p-8">
+              <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 max-w-md w-full text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-6"></div>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Starting Game with Bot...</h2>
+                <p className="text-gray-600 mb-4">Player: <span className="font-semibold text-indigo-600">{username}</span></p>
+                <p className="text-sm text-gray-500">Setting up your match against our competitive bot. Good luck!</p>
+              </div>
             </div>
-          </div>
-        );
-      
+          );
+        } else {
+          return (
+            <div className="flex flex-col items-center justify-center min-h-screen p-4 sm:p-8">
+              <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 max-w-md w-full text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-6"></div>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Finding Opponent...</h2>
+                <p className="text-gray-600 mb-4">Player: <span className="font-semibold text-indigo-600">{username}</span></p>
+                <p className="text-sm text-gray-500">
+                  Searching for another player. If no player joins within 10 seconds, 
+                  you'll be matched with our competitive bot!
+                </p>
+                <button
+                  onClick={handleNewGame}
+                  className="mt-6 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          );
+        }
       case 'playing':
         return (
-          <GameBoard
-            game={currentGame}
-            username={username}
-            playerNumber={playerNumber}
-            onMakeMove={handleMakeMove}
-            onNewGame={handleNewGame}
-            onShowStats={handleShowStats}
-          />
+          <>
+            <GameBoard
+              game={currentGame}
+              username={username}
+              playerNumber={playerNumber}
+              onMakeMove={handleMakeMove}
+              onRequestNewGame={handleRequestNewGame}
+              onShowStats={handleShowStats}
+            />
+            <NewGameModal
+              isOpen={showNewGameModal}
+              onClose={handleCloseNewGameModal}
+              onPlayWithBot={handlePlayWithBot}
+              onPlayWithPlayer={handlePlayWithPlayer}
+            />
+          </>
         );
-      
       case 'leaderboard':
         return (
           <Leaderboard
@@ -236,7 +307,6 @@ function App() {
             onBack={handleBackToMenu}
           />
         );
-      
       case 'stats':
         return (
           <UserStats
@@ -245,75 +315,70 @@ function App() {
             onBack={handleBackToMenu}
           />
         );
-      
       default:
         return null;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
-      {/* Header */}
-      <header className="bg-white/10 backdrop-blur-md border-b border-white/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-2">
-              <Gamepad2 className="h-8 w-8 text-white" />
-              <h1 className="text-2xl font-bold text-white">4-in-a-Row</h1>
-            </div>
-            
-            {gameState !== 'welcome' && (
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={handleShowLeaderboard}
-                  className="flex items-center space-x-2 px-3 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors"
-                  disabled={gameState === 'leaderboard'}
-                >
-                  <Trophy className="h-4 w-4" />
-                  <span>Leaderboard</span>
-                </button>
-                
-                {username && (
-                  <button
-                    onClick={handleShowStats}
-                    className="flex items-center space-x-2 px-3 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors"
-                    disabled={gameState === 'stats'}
-                  >
-                    <BarChart3 className="h-4 w-4" />
-                    <span>My Stats</span>
-                  </button>
-                )}
-                
-                <div className="flex items-center space-x-2 text-white">
-                  <div className={`w-2 h-2 rounded-full ${connectionStatus === 'connected' ? 'bg-green-400' : 'bg-red-400'}`} />
-                  <span className="text-sm">{connectionStatus}</span>
-                </div>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 font-inter">
+        <header className="bg-white/10 backdrop-blur-md border-b border-white/20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col sm:flex-row justify-between items-center py-4">
+              <div className="flex items-center space-x-2 mb-4 sm:mb-0">
+                <Gamepad2 className="h-8 w-8 text-white" />
+                <h1 className="text-2xl font-bold text-white">4-in-a-Row</h1>
               </div>
-            )}
+              {gameState !== 'welcome' && (
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={handleShowLeaderboard}
+                    className="flex items-center space-x-2 px-3 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors"
+                    disabled={gameState === 'leaderboard'}
+                    aria-label="View Leaderboard"
+                  >
+                    <Trophy className="h-4 w-4" />
+                    <span>Leaderboard</span>
+                  </button>
+                  {username && (
+                    <button
+                      onClick={handleShowStats}
+                      className="flex items-center space-x-2 px-3 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors"
+                      disabled={gameState === 'stats'}
+                      aria-label="View My Stats"
+                    >
+                      <BarChart3 className="h-4 w-4" />
+                      <span>My Stats</span>
+                    </button>
+                  )}
+                  <div className="flex items-center space-x-2 text-white">
+                    <div className={`w-2 h-2 rounded-full ${connectionStatus === 'connected' ? 'bg-green-400' : connectionStatus === 'reconnecting' ? 'bg-yellow-400' : 'bg-red-400'}`} />
+                    <span className="text-sm">{connectionStatus}</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main>
-        {renderCurrentScreen()}
-      </main>
-
-      {/* Toast Notifications */}
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
-    </div>
+        </header>
+        <main>
+          {renderCurrentScreen()}
+        </main>
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
+      </div>
+    </ErrorBoundary>
   );
 }
 
-export default App; 
+export default App;
