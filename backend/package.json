@@ -9,21 +9,27 @@
     "test": "jest"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "socket.io": "^4.7.2",
     "cors": "^2.8.5",
-    "mongoose": "^8.0.3",
-    "kafkajs": "^2.2.4",
-    "uuid": "^9.0.0",
     "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.8.1",
     "helmet": "^7.0.0",
-    "express-rate-limit": "^6.8.1"
+    "kafkajs": "^2.2.4",
+    "mongodb": "^6.17.0",
+    "mongoose": "^8.0.3",
+    "socket.io": "^4.7.2",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1",
-    "jest": "^29.6.2"
+    "jest": "^29.6.2",
+    "nodemon": "^3.0.1"
   },
-  "keywords": ["connect-four", "websocket", "multiplayer", "game-server"],
+  "keywords": [
+    "connect-four",
+    "websocket",
+    "multiplayer",
+    "game-server"
+  ],
   "author": "Connect4 Team",
   "license": "MIT"
-} 
+}
