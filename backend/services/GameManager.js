@@ -511,6 +511,27 @@ class GameManager {
     // Remove from active games
     this.activeGames.delete(gameId);
 
+    // Clean up playerSockets and socketPlayers for both players if not in another active game
+    const removePlayerMappings = (username) => {
+      if (!username || username === 'Bot') return;
+      const socketId = this.playerSockets.get(username);
+      if (!socketId) return;
+      // Check if this user is in any other active game
+      let stillInGame = false;
+      for (const game of this.activeGames.values()) {
+        if (game.player1 === username || game.player2 === username) {
+          stillInGame = true;
+          break;
+        }
+      }
+      if (!stillInGame) {
+        this.playerSockets.delete(username);
+        this.socketPlayers.delete(socketId);
+      }
+    };
+    removePlayerMappings(game.player1);
+    removePlayerMappings(game.player2);
+
     console.log(`🏁 Game ended: ${gameId}, Winner: ${game.gameLogic.winner || 'Draw'}`);
   }
 

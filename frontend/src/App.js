@@ -114,6 +114,12 @@ function App() {
 
     socketService.onError((error) => {
       setIsLoading(false);
+      if (
+        error.message === 'Username already in use' &&
+        (gameState === 'playing' || gameState === 'waiting')
+      ) {
+        return;
+      }
       toast.error(error.message || 'An error occurred');
     });
 
