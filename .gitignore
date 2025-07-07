@@ -91,3 +91,5 @@ temp/
 
 # Additional changes from the code block
 *.local.js 
+
+certs/
