@@ -6,13 +6,25 @@ class KafkaService {
   constructor() {
     const fs = require('fs');
 
-    const sslOptions = (config.kafka.ssl === 'true') ? {
-      rejectUnauthorized: true,
-      ca: [fs.readFileSync(config.kafka.sslCa, 'utf-8')],
-      key: config.kafka.sslKey ? fs.readFileSync(config.kafka.sslKey, 'utf-8') : undefined,
-      cert: config.kafka.sslCert ? fs.readFileSync(config.kafka.sslCert, 'utf-8') : undefined
-    } : false;
+    let sslOptions = false;
 
+    if (config.kafka.ssl === 'true') {
+      const caPath = config.kafka.sslCa;
+      const keyPath = config.kafka.sslKey;
+      const certPath = config.kafka.sslCert;
+
+      if (fs.existsSync(caPath)) {
+        sslOptions = {
+          rejectUnauthorized: true,
+          ca: [fs.readFileSync(caPath, 'utf-8')],
+          key: fs.existsSync(keyPath) ? fs.readFileSync(keyPath, 'utf-8') : undefined,
+          cert: fs.existsSync(certPath) ? fs.readFileSync(certPath, 'utf-8') : undefined
+        };
+      } else {
+        console.warn(`⚠️ Kafka SSL enabled, but CA file not found at ${caPath}`);
+      }
+    }
+    
     const saslOptions = (config.kafka.saslMechanism && config.kafka.saslUsername && config.kafka.saslPassword) ? {
       mechanism: config.kafka.saslMechanism,
       username: config.kafka.saslUsername,
