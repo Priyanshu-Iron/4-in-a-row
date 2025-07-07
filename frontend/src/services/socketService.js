@@ -5,7 +5,7 @@ class SocketService {
     this.socket = null;
     this.connected = false;
     this.listeners = new Map();
-    this.serverUrl = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+    this.serverUrl = process.env.REACT_APP_SOCKET_URL || 'http://localhost:3001';
   }
 
   connect() {
