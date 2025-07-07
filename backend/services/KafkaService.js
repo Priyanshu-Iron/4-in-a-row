@@ -1,16 +1,35 @@
+require('dotenv').config();
 const { Kafka } = require('kafkajs');
 const config = require('../config');
 
 class KafkaService {
   constructor() {
+    const fs = require('fs');
+
+    const sslOptions = (config.kafka.ssl === 'true') ? {
+      rejectUnauthorized: true,
+      ca: [fs.readFileSync(config.kafka.sslCa, 'utf-8')],
+      key: config.kafka.sslKey ? fs.readFileSync(config.kafka.sslKey, 'utf-8') : undefined,
+      cert: config.kafka.sslCert ? fs.readFileSync(config.kafka.sslCert, 'utf-8') : undefined
+    } : false;
+
+    const saslOptions = (config.kafka.saslMechanism && config.kafka.saslUsername && config.kafka.saslPassword) ? {
+      mechanism: config.kafka.saslMechanism,
+      username: config.kafka.saslUsername,
+      password: config.kafka.saslPassword
+    } : undefined;
+
     this.kafka = new Kafka({
       clientId: config.kafka.clientId,
       brokers: [config.kafka.broker],
+      ssl: sslOptions,
+      sasl: saslOptions,
       retry: {
         initialRetryTime: 100,
         retries: 8
       }
     });
+
 
     this.producer = this.kafka.producer();
     this.consumer = this.kafka.consumer({ 

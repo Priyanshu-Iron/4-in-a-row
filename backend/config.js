@@ -20,7 +20,14 @@ const config = {
     broker: process.env.KAFKA_BROKER || 'localhost:9092',
     clientId: process.env.KAFKA_CLIENT_ID || '4-in-a-row-backend',
     gameEventsTopic: process.env.KAFKA_TOPIC_GAME_EVENTS || 'game-events',
-    userEventsTopic: process.env.KAFKA_TOPIC_USER_EVENTS || 'user-events'
+    userEventsTopic: process.env.KAFKA_TOPIC_USER_EVENTS || 'user-events',
+    ssl: process.env.KAFKA_SSL || 'false',
+    sslCa: process.env.KAFKA_SSL_CA,
+    sslKey: process.env.KAFKA_SSL_KEY,
+    sslCert: process.env.KAFKA_SSL_CERT,
+    saslMechanism: process.env.KAFKA_SASL_MECHANISM,
+    saslUsername: process.env.KAFKA_SASL_USERNAME,
+    saslPassword: process.env.KAFKA_SASL_PASSWORD
   },
   
   game: {
