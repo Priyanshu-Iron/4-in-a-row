@@ -92,6 +92,16 @@ const GameBoard = ({ game, username, playerNumber, onMakeMove, onRequestNewGame,
     }
   };
 
+  const getOpponentName = () => {
+    if (!game) return '';
+    if (playerNumber === 1) {
+      return game.player2 === 'bot' ? 'Bot' : game.player2;
+    } else if (playerNumber === 2) {
+      return game.player1 === 'bot' ? 'Bot' : game.player1;
+    }
+    return '';
+  };
+
   const statusInfo = getGameStatusMessage();
   const board = game?.board || Array(6).fill().map(() => Array(7).fill(0));
   const isGameOver = game?.gameStatus && game.gameStatus !== 'active';
@@ -105,7 +115,7 @@ const GameBoard = ({ game, username, playerNumber, onMakeMove, onRequestNewGame,
             {getAvatar(game?.player1, 0)}
             <span className="text-xl font-bold text-black">{game?.player1}</span>
             <span className="text-lg font-bold text-gray-400">vs</span>
-            <span className="text-xl font-bold text-black">{game?.player2}</span>
+            <span className="text-xl font-bold text-black">{getOpponentName()}</span>
             {getAvatar(game?.player2, 1)}
           </div>
           <div className={`text-lg px-4 py-2 rounded font-semibold ${statusInfo.className}`}>{statusInfo.message}</div>
@@ -175,4 +185,4 @@ const GameBoard = ({ game, username, playerNumber, onMakeMove, onRequestNewGame,
   );
 };
 
-export default GameBoard; 
+export default GameBoard;

@@ -181,6 +181,8 @@ class GameManager {
     // Emit game update to all players in the game
     this.io.to(gameId).emit('game_update', {
       gameId,
+      player1: game.player1,
+      player2: game.player2,
       board: game.gameLogic.board,
       currentPlayer: game.gameLogic.currentPlayer,
       gameStatus: game.gameLogic.gameStatus,
@@ -323,6 +325,8 @@ class GameManager {
           
           this.io.to(gameId).emit('game_update', {
             gameId,
+            player1: game.player1,
+            player2: game.player2,
             gameStatus: 'forfeited',
             winner: game.gameLogic.winner === 1 ? game.player1 : game.gameLogic.winner === 2 ? game.player2 : null,
             message: `${username} disconnected and did not reconnect`
@@ -426,14 +430,14 @@ class GameManager {
     // Emit game start to players
     this.io.to(gameId).emit('game_started', {
       gameId,
-      player1: player1.username,
-      player2: player2.username,
+      player1: gameState.player1,
+      player2: gameState.player2,
       board: gameLogic.board,
       currentPlayer: gameLogic.currentPlayer,
       gameStatus: gameLogic.gameStatus,
       winner: gameLogic.winner,
       winningCells: gameLogic.winningCells,
-      yourPlayer: null // Will be set individually below
+      yourPlayer: null // Set individually if needed
     });
 
     // Send individual player info
@@ -502,6 +506,8 @@ class GameManager {
     // Emit game update
     this.io.to(gameId).emit('game_update', {
       gameId,
+      player1: game.player1,
+      player2: game.player2,
       board: game.gameLogic.board,
       currentPlayer: game.gameLogic.currentPlayer,
       gameStatus: game.gameLogic.gameStatus,
@@ -648,4 +654,4 @@ class GameManager {
   }
 }
 
-module.exports = GameManager; 
+module.exports = GameManager;

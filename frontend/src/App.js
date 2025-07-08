@@ -76,7 +76,6 @@ function App() {
         else if (username === data.player2) setPlayerNumber(2);
         else setPlayerNumber(null);
       }
-      toast.success(`Game started! Playing against ${data.player2}`);
     });
 
     socketService.onPlayerNumber((data) => {
