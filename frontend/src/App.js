@@ -71,6 +71,11 @@ function App() {
       setGameState('playing');
       setIsLoading(false);
       setWaitingMode(null);
+      if (username && data.player1 && data.player2) {
+        if (username === data.player1) setPlayerNumber(1);
+        else if (username === data.player2) setPlayerNumber(2);
+        else setPlayerNumber(null);
+      }
       toast.success(`Game started! Playing against ${data.player2}`);
     });
 
@@ -81,7 +86,11 @@ function App() {
     socketService.onGameUpdate((data) => {
       setCurrentGame(data);
       setGameState('playing');
-      // Show toast notification for game result
+      if (username && data.player1 && data.player2) {
+        if (username === data.player1) setPlayerNumber(1);
+        else if (username === data.player2) setPlayerNumber(2);
+        else setPlayerNumber(null);
+      }
       if (data.gameStatus === 'won') {
         const winner = (data.winner || '').toLowerCase();
         const myName = (username || '').toLowerCase();

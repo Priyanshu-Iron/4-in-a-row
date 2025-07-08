@@ -45,30 +45,72 @@ class GameManager {
 
     // Normalize username on join
     username = username.trim().toLowerCase();
-    
-    // Check if player is already in a game
+
+    // If a reconnection timer exists for this username, treat as reconnection
+    if (this.reconnectionTimers.has(username)) {
+      clearTimeout(this.reconnectionTimers.get(username));
+      this.reconnectionTimers.delete(username);
+      // Remove any old socket mapping for this username
+      const oldSocketId = this.playerSockets.get(username);
+      if (oldSocketId) {
+        this.socketPlayers.delete(oldSocketId);
+        this.playerSockets.delete(username);
+      }
+      this.playerSockets.set(username, socket.id);
+      this.socketPlayers.set(socket.id, username);
+      // Find the game and rejoin
+      let game = null;
+      for (const [id, gameState] of this.activeGames) {
+        if (gameState.player1 === username || gameState.player2 === username) {
+          game = gameState;
+          socket.join(id);
+          socket.emit('game_reconnected', {
+            gameId: id,
+            board: game.gameLogic.board,
+            currentPlayer: game.gameLogic.currentPlayer,
+            gameStatus: game.gameLogic.gameStatus,
+            player1: game.player1,
+            player2: game.player2,
+            moveCount: game.moveCount
+          });
+          return;
+        }
+      }
+      // If no game found, treat as new join
+    }
+
+    // Remove any old socket mapping for this username (force cleanup)
+    const oldSocketId = this.playerSockets.get(username);
+    if (oldSocketId) {
+      this.socketPlayers.delete(oldSocketId);
+      this.playerSockets.delete(username);
+    }
+
+    // Check if player is already in a game (should not happen now)
     if (this.playerSockets.has(username)) {
       socket.emit('error', { message: 'Username already in use' });
       return;
     }
 
-    // Clear any existing reconnection timer
-    if (this.reconnectionTimers.has(username)) {
-      clearTimeout(this.reconnectionTimers.get(username));
-      this.reconnectionTimers.delete(username);
-    }
-
     // Create or update user in database
     await this.database.createOrUpdateUser(username);
-    
+
     // Store player mapping
     this.playerSockets.set(username, socket.id);
     this.socketPlayers.set(socket.id, username);
-    
+
     // If vsBot is true, immediately create a game with the bot
     if (vsBot) {
       await this.createGame({ username, socketId: socket.id }, { username: 'bot', socketId: null });
       return;
+    }
+
+    // Prevent duplicate waiting players
+    for (const player of this.waitingPlayers.values()) {
+      if (player.username === username) {
+        socket.emit('error', { message: 'Already waiting for a game' });
+        return;
+      }
     }
 
     // Add to waiting players
@@ -79,10 +121,10 @@ class GameManager {
     });
 
     socket.emit('waiting_for_opponent', { username });
-    
+
     // Publish player joined event
     await this.kafka.playerJoined({ username, socketId: socket.id });
-    
+
     console.log(`👤 Player joined: ${username}`);
   }
 
@@ -240,19 +282,28 @@ class GameManager {
   // Handle player disconnect
   async handleDisconnect(socket) {
     const username = this.socketPlayers.get(socket.id)?.trim().toLowerCase();
-    
+
     if (username) {
       console.log(`🔌 Player disconnected: ${username}`);
-      
+
       // Remove from waiting players
       this.waitingPlayers.delete(socket.id);
-      
-      // Start reconnection timer
-      this.startReconnectionTimer(username);
-      
+
+      // Only start reconnection timer if user is in an active game
+      let inActiveGame = false;
+      for (const game of this.activeGames.values()) {
+        if (game.player1 === username || game.player2 === username) {
+          inActiveGame = true;
+          break;
+        }
+      }
+      if (inActiveGame) {
+        this.startReconnectionTimer(username);
+      }
+
       // Publish disconnect event
       await this.kafka.playerDisconnected({ username, socketId: socket.id });
-      
+
       // Remove socket mappings (but keep reconnection timer)
       this.socketPlayers.delete(socket.id);
       this.playerSockets.delete(username);
@@ -298,18 +349,24 @@ class GameManager {
   // Process matchmaking
   async processMatchmaking() {
     const waitingList = Array.from(this.waitingPlayers.values());
-    
     if (waitingList.length === 0) return;
+
+    // Remove duplicate usernames from waiting list
+    const uniqueWaiting = [];
+    const seen = new Set();
+    for (const player of waitingList) {
+      if (!seen.has(player.username)) {
+        uniqueWaiting.push(player);
+        seen.add(player.username);
+      }
+    }
 
     // Group players by wait time
     const readyForBot = [];
     const readyForPlayer = [];
-    
     const now = Date.now();
-    
-    for (const player of waitingList) {
+    for (const player of uniqueWaiting) {
       const waitTime = now - player.joinedAt;
-      
       if (waitTime >= config.game.matchmakingTimeout) {
         readyForBot.push(player);
       } else {
@@ -321,7 +378,6 @@ class GameManager {
     while (readyForPlayer.length >= 2) {
       const player1 = readyForPlayer.shift();
       const player2 = readyForPlayer.shift();
-      
       await this.createGame(player1, player2);
     }
 
@@ -472,15 +528,17 @@ class GameManager {
     const durationSeconds = Math.floor((endTime - game.startTime) / 1000);
 
     // Update user statistics
+    let player1Stats = null;
+    let player2Stats = null;
     if (game.player1 !== 'bot') {
-      await this.database.updateUserStats(game.player1, {
+      player1Stats = await this.database.updateUserStats(game.player1, {
         gameStatus: game.gameLogic.gameStatus,
         winner: game.gameLogic.winner
       });
     }
     
     if (game.player2 !== 'bot') {
-      await this.database.updateUserStats(game.player2, {
+      player2Stats = await this.database.updateUserStats(game.player2, {
         gameStatus: game.gameLogic.gameStatus,
         winner: game.gameLogic.winner
       });
@@ -508,6 +566,35 @@ class GameManager {
       durationSeconds,
       totalMoves: game.moveCount
     });
+
+    // Emit updated leaderboard to all clients
+    try {
+      const leaderboard = await this.database.getLeaderboard(10);
+      this.io.emit('leaderboard', { leaderboard });
+    } catch (err) {
+      console.error('Failed to emit updated leaderboard:', err);
+    }
+
+    // Emit updated user stats to both players
+    const emitUserStats = async (username, socketId) => {
+      if (!username || username === 'bot') return;
+      try {
+        const stats = await this.database.getUserStats(username);
+        const gameHistory = await this.database.getUserGameHistory(username, 10);
+        if (socketId && this.io.sockets.sockets.get(socketId)) {
+          this.io.sockets.sockets.get(socketId).emit('user_stats', {
+            stats: stats || { username, games_played: 0, games_won: 0, games_lost: 0, games_drawn: 0 },
+            gameHistory
+          });
+        }
+      } catch (err) {
+        console.error('Failed to emit updated user stats:', err);
+      }
+    };
+    const player1SocketId = this.playerSockets.get(game.player1);
+    const player2SocketId = this.playerSockets.get(game.player2);
+    await emitUserStats(game.player1, player1SocketId);
+    await emitUserStats(game.player2, player2SocketId);
 
     // Remove from active games
     this.activeGames.delete(gameId);
