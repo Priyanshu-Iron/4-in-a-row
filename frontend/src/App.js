@@ -79,20 +79,18 @@ function App() {
     });
 
     socketService.onGameUpdate((data) => {
-      setCurrentGame(prev => ({ ...prev, ...data }));
-      if (data.gameStatus === 'won' || data.gameStatus === 'draw' || data.gameStatus === 'forfeited') {
-        socketService.getLeaderboard();
-      }
+      setCurrentGame(data);
+      setGameState('playing');
+      // Show toast notification for game result
       if (data.gameStatus === 'won') {
-        const winner = String(data.winner || '');
-        const user = String(username || '');
-        console.log('[GameUpdate] winner:', winner, 'user:', user, 'raw winner:', data.winner, 'raw username:', username, 'playerNumber:', playerNumber, 'player1:', data.player1, 'player2:', data.player2);
+        const winner = (data.winner || '').toLowerCase();
+        const myName = (username || '').toLowerCase();
         if (
-          winner === user ||
-          (playerNumber && ((winner === data.player1 && playerNumber === 1) || (winner === data.player2 && playerNumber === 2)))
+          winner === myName ||
+          (playerNumber && ((winner === (data.player1 || '').toLowerCase() && playerNumber === 1) || (winner === (data.player2 || '').toLowerCase() && playerNumber === 2)))
         ) {
           toast.success('🎉 You won!');
-        } else if (winner.toLowerCase() === 'bot' && user.toLowerCase() !== 'bot') {
+        } else if (winner === 'bot' && myName !== 'bot') {
           toast.info('🤖 Bot wins! Better luck next time!');
         } else {
           toast.error('😞 You lost!');
