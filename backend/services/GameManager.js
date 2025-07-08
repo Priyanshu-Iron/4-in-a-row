@@ -141,7 +141,7 @@ class GameManager {
       board: game.gameLogic.board,
       currentPlayer: game.gameLogic.currentPlayer,
       gameStatus: game.gameLogic.gameStatus,
-      winner: game.gameLogic.winner,
+      winner: game.gameLogic.winner === 1 ? game.player1 : game.gameLogic.winner === 2 ? game.player2 : null,
       winningCells: game.gameLogic.winningCells,
       lastMove: { player: username, column, row: result.row },
       moveCount: game.moveCount
@@ -272,7 +272,7 @@ class GameManager {
           this.io.to(gameId).emit('game_update', {
             gameId,
             gameStatus: 'forfeited',
-            winner: game.gameLogic.winner,
+            winner: game.gameLogic.winner === 1 ? game.player1 : game.gameLogic.winner === 2 ? game.player2 : null,
             message: `${username} disconnected and did not reconnect`
           });
           
@@ -448,7 +448,7 @@ class GameManager {
       board: game.gameLogic.board,
       currentPlayer: game.gameLogic.currentPlayer,
       gameStatus: game.gameLogic.gameStatus,
-      winner: game.gameLogic.winner,
+      winner: game.gameLogic.winner === 1 ? game.player1 : game.gameLogic.winner === 2 ? game.player2 : null,
       winningCells: game.gameLogic.winningCells,
       lastMove: { player: 'Bot', column, row: result.row },
       moveCount: game.moveCount
@@ -490,7 +490,7 @@ class GameManager {
       gameId,
       player1Username: game.player1,
       player2Username: game.player2,
-      winner: game.gameLogic.winner,
+      winner: game.gameLogic.winner === 1 ? game.player1 : game.gameLogic.winner === 2 ? game.player2 : null,
       gameStatus: game.gameLogic.gameStatus,
       durationSeconds,
       totalMoves: game.moveCount,
@@ -502,7 +502,7 @@ class GameManager {
       gameId,
       player1: game.player1,
       player2: game.player2,
-      winner: game.gameLogic.winner,
+      winner: game.gameLogic.winner === 1 ? game.player1 : game.gameLogic.winner === 2 ? game.player2 : null,
       gameStatus: game.gameLogic.gameStatus,
       durationSeconds,
       totalMoves: game.moveCount
