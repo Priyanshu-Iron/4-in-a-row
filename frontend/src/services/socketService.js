@@ -5,18 +5,7 @@ class SocketService {
     this.socket = null;
     this.connected = false;
     this.listeners = new Map();
-    
-    // Better environment variable handling
-    this.serverUrl = process.env.REACT_APP_SOCKET_URL || 
-                     process.env.REACT_APP_BACKEND_URL || 
-                     'http://localhost:3001';
-    
-    console.log('🌐 Socket server URL:', this.serverUrl);
-    console.log('🌐 Environment variables:', {
-      REACT_APP_SOCKET_URL: process.env.REACT_APP_SOCKET_URL,
-      REACT_APP_BACKEND_URL: process.env.REACT_APP_BACKEND_URL,
-      NODE_ENV: process.env.NODE_ENV
-    });
+    this.serverUrl = 'https://four-in-a-row-gl9a.onrender.com';
   }
 
   connect() {
@@ -37,12 +26,8 @@ class SocketService {
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
       timeout: 20000,
-      // Remove 'websocket' from transports for better compatibility with Render
-      transports: ['polling', 'websocket'],
-      withCredentials: false, // Set to false for cross-origin
-      // Add these options for better HTTPS compatibility
-      secure: this.serverUrl.startsWith('https://'),
-      rejectUnauthorized: false
+      transports: ['websocket', 'polling'],
+      withCredentials: true
     });
 
     this.socket.on('connect', () => {
@@ -57,7 +42,6 @@ class SocketService {
 
     this.socket.on('connect_error', (error) => {
       console.error('🔌 Connection error:', error);
-      console.error('🔌 Trying to connect to:', this.serverUrl);
       this.connected = false;
     });
 
