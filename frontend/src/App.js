@@ -232,7 +232,6 @@ function App() {
 
   const handlePlayWithBot = () => {
     setShowNewGameModal(false);
-    setGameState('waiting');
     setIsLoading(true);
     setWaitingMode('bot');
     socketService.joinGame(username || 'Player', true);
@@ -260,16 +259,7 @@ function App() {
         );
       case 'waiting':
         if (waitingMode === 'bot') {
-          return (
-            <div className="flex flex-col items-center justify-center min-h-screen p-4 sm:p-8">
-              <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 max-w-md w-full text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-6"></div>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Starting Game with Bot...</h2>
-                <p className="text-gray-600 mb-4">Player: <span className="font-semibold text-indigo-600">{username}</span></p>
-                <p className="text-sm text-gray-500">Setting up your match against our competitive bot. Good luck!</p>
-              </div>
-            </div>
-          );
+          return null;
         } else {
           return (
             <div className="flex flex-col items-center justify-center min-h-screen p-4 sm:p-8">
