@@ -39,6 +39,11 @@ const GameBoard = ({ game, username, playerNumber, onMakeMove, onRequestNewGame,
     }
   }, [game, username]);
 
+  useEffect(() => {
+    if (!game) return;
+    prevBoard.current = JSON.stringify(game.board);
+  }, []);
+
   const getPlayerColor = (player) => {
     if (player === 1) return 'bg-red-600';
     if (player === 2) return 'bg-black';
@@ -112,11 +117,11 @@ const GameBoard = ({ game, username, playerNumber, onMakeMove, onRequestNewGame,
         {/* Header */}
         <div className="w-full flex flex-col items-center mb-6">
           <div className="flex items-center space-x-6 mb-2">
-            {getAvatar(game?.player1, 0)}
-            <span className="text-xl font-bold text-black">{game?.player1}</span>
+            {getAvatar(playerNumber === 1 ? username : getOpponentName(), 0)}
+            <span className="text-xl font-bold text-black">{playerNumber === 1 ? 'You' : getOpponentName()}</span>
             <span className="text-lg font-bold text-gray-400">vs</span>
-            <span className="text-xl font-bold text-black">{getOpponentName()}</span>
-            {getAvatar(game?.player2, 1)}
+            <span className="text-xl font-bold text-black">{playerNumber === 2 ? 'You' : getOpponentName()}</span>
+            {getAvatar(playerNumber === 2 ? username : getOpponentName(), 1)}
           </div>
           <div className={`text-lg px-4 py-2 rounded font-semibold ${statusInfo.className}`}>{statusInfo.message}</div>
           <div className="text-sm text-gray-500 mt-1">Move {game?.moveCount ?? 0}</div>

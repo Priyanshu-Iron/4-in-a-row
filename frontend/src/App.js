@@ -86,8 +86,8 @@ function App() {
       setCurrentGame(data);
       setGameState('playing');
       if (username && data.player1 && data.player2) {
-        if (username === data.player1) setPlayerNumber(1);
-        else if (username === data.player2) setPlayerNumber(2);
+        if (username.toLowerCase() === (data.player1 || '').toLowerCase()) setPlayerNumber(1);
+        else if (username.toLowerCase() === (data.player2 || '').toLowerCase()) setPlayerNumber(2);
         else setPlayerNumber(null);
       }
       if (data.gameStatus === 'won') {
