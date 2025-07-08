@@ -62,8 +62,9 @@ class Database {
   // User management methods
   async createOrUpdateUser(username) {
     try {
+      const normalized = username.trim().toLowerCase();
       const user = await User.findOneAndUpdate(
-        { username },
+        { username: normalized },
         { updated_at: new Date() },
         { upsert: true, new: true }
       );
@@ -76,7 +77,8 @@ class Database {
 
   async getUserStats(username) {
     try {
-      const user = await User.findOne({ username });
+      const normalized = username.trim().toLowerCase();
+      const user = await User.findOne({ username: normalized });
       return user;
     } catch (error) {
       console.error('Error getting user stats:', error);
@@ -86,15 +88,15 @@ class Database {
 
   async updateUserStats(username, gameResult) {
     const { gameStatus, winner } = gameResult;
-    
     try {
+      const normalized = username.trim().toLowerCase();
+      const normalizedWinner = winner ? winner.trim().toLowerCase() : null;
       const updateData = {
         $inc: { games_played: 1 },
         updated_at: new Date()
       };
-
       if (gameStatus === 'won') {
-        if (winner === username) {
+        if (normalizedWinner === normalized) {
           updateData.$inc.games_won = 1;
         } else {
           updateData.$inc.games_lost = 1;
@@ -102,9 +104,8 @@ class Database {
       } else if (gameStatus === 'draw') {
         updateData.$inc.games_drawn = 1;
       }
-
       const user = await User.findOneAndUpdate(
-        { username },
+        { username: normalized },
         updateData,
         { new: true }
       );
@@ -249,19 +250,19 @@ class Database {
   // Get game history for a user
   async getUserGameHistory(username, limit = 10) {
     try {
+      const normalized = username.trim().toLowerCase();
       const games = await Game.find({
         $or: [
-          { player1_username: username },
-          { player2_username: username }
+          { player1_username: normalized },
+          { player2_username: normalized }
         ]
       })
       .sort({ completed_at: -1 })
       .limit(limit)
       .lean();
-
       return games.map(game => ({
         game_id: game.game_id,
-        opponent: game.player1_username === username ? game.player2_username : game.player1_username,
+        opponent: game.player1_username === normalized ? game.player2_username : game.player1_username,
         winner: game.winner,
         game_status: game.game_status,
         duration_seconds: game.duration_seconds,

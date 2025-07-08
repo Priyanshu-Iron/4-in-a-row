@@ -80,12 +80,19 @@ function App() {
 
     socketService.onGameUpdate((data) => {
       setCurrentGame(prev => ({ ...prev, ...data }));
+      if (data.gameStatus === 'won' || data.gameStatus === 'draw' || data.gameStatus === 'forfeited') {
+        socketService.getLeaderboard();
+      }
       if (data.gameStatus === 'won') {
-        const winner = String(data.winner || '').toLowerCase();
-        const user = String(username || '').toLowerCase();
-        if (winner === user) {
+        const winner = String(data.winner || '');
+        const user = String(username || '');
+        console.log('[GameUpdate] winner:', winner, 'user:', user, 'raw winner:', data.winner, 'raw username:', username, 'playerNumber:', playerNumber, 'player1:', data.player1, 'player2:', data.player2);
+        if (
+          winner === user ||
+          (playerNumber && ((winner === data.player1 && playerNumber === 1) || (winner === data.player2 && playerNumber === 2)))
+        ) {
           toast.success('🎉 You won!');
-        } else if (winner === 'bot' && user !== 'bot') {
+        } else if (winner.toLowerCase() === 'bot' && user.toLowerCase() !== 'bot') {
           toast.info('🤖 Bot wins! Better luck next time!');
         } else {
           toast.error('😞 You lost!');
@@ -156,17 +163,14 @@ function App() {
       toast.error('Please enter a username');
       return;
     }
-
     if (connectionStatus !== 'connected') {
       toast.error('Not connected to server. Please wait.');
       return;
     }
-
     setIsLoading(true);
-    setUsername(enteredUsername.trim());
-    
+    setUsername(enteredUsername.trim().toLowerCase());
     try {
-      socketService.joinGame(enteredUsername.trim());
+      socketService.joinGame(enteredUsername.trim().toLowerCase());
     } catch (error) {
       console.error('Failed to join game:', error);
       toast.error('Failed to join game. Please try again.');

@@ -43,7 +43,8 @@ class GameManager {
       return;
     }
 
-    username = username.trim();
+    // Normalize username on join
+    username = username.trim().toLowerCase();
     
     // Check if player is already in a game
     if (this.playerSockets.has(username)) {
@@ -87,7 +88,7 @@ class GameManager {
 
   // Handle player making a move
   async handleMakeMove(socket, { gameId, column }) {
-    const username = this.socketPlayers.get(socket.id);
+    const username = this.socketPlayers.get(socket.id)?.trim().toLowerCase();
     if (!username) {
       socket.emit('error', { message: 'Player not found' });
       return;
@@ -238,7 +239,7 @@ class GameManager {
 
   // Handle player disconnect
   async handleDisconnect(socket) {
-    const username = this.socketPlayers.get(socket.id);
+    const username = this.socketPlayers.get(socket.id)?.trim().toLowerCase();
     
     if (username) {
       console.log(`🔌 Player disconnected: ${username}`);
@@ -337,8 +338,8 @@ class GameManager {
     
     const gameState = {
       gameId,
-      player1: player1.username,
-      player2: player2.username,
+      player1: player1.username.trim().toLowerCase(),
+      player2: player2.username.trim().toLowerCase(),
       gameLogic,
       startTime: Date.now(),
       moveCount: 0,
