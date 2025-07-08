@@ -4,7 +4,7 @@ import confetti from 'canvas-confetti';
 
 const AVATAR_COLORS = ['bg-red-600', 'bg-black', 'bg-gray-400'];
 function getAvatar(name, idx) {
-  if (!name) return <User className="h-8 w-8 text-gray-300" />;
+  if (!name) name = idx === 1 ? 'Bot' : 'Player';
   const color = AVATAR_COLORS[idx % AVATAR_COLORS.length];
   const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
   return (
@@ -87,7 +87,7 @@ const GameBoard = ({ game, username, playerNumber, onMakeMove, onRequestNewGame,
     if (game.currentPlayer === playerNumber) {
       return { message: 'Your Turn', className: 'text-red-600 font-bold' };
     } else {
-      const opponent = playerNumber === 1 ? game.player2 : game.player1;
+      const opponent = playerNumber === 1 ? (game.player2 || 'Bot') : (game.player1 || 'Player');
       return { message: `${opponent}'s Turn`, className: 'text-black font-bold' };
     }
   };
