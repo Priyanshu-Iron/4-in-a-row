@@ -67,7 +67,7 @@ class GameManager {
     
     // If vsBot is true, immediately create a game with the bot
     if (vsBot) {
-      await this.createGame({ username, socketId: socket.id }, { username: 'Bot', socketId: null });
+      await this.createGame({ username, socketId: socket.id }, { username: 'bot', socketId: null });
       return;
     }
 
@@ -157,7 +157,7 @@ class GameManager {
     }
 
     // If playing against bot, make bot move
-    if (game.player2 === 'Bot' && game.gameLogic.currentPlayer === 2) {
+    if (game.player2 === 'bot' && game.gameLogic.currentPlayer === 2) {
       setTimeout(() => this.makeBotMove(gameId), config.game.botMoveDelay);
     }
   }
@@ -327,7 +327,7 @@ class GameManager {
 
     // Match remaining players with bots
     for (const player of readyForBot) {
-      await this.createGame(player, { username: 'Bot', socketId: null });
+      await this.createGame(player, { username: 'bot', socketId: null });
     }
   }
 
@@ -343,7 +343,7 @@ class GameManager {
       gameLogic,
       startTime: Date.now(),
       moveCount: 0,
-      isVsBot: player2.username === 'Bot'
+      isVsBot: player2.username === 'bot'
     };
 
     this.activeGames.set(gameId, gameState);
@@ -430,7 +430,7 @@ class GameManager {
     // Save bot move to database
     await this.database.saveMove(gameId, {
       moveNumber: game.moveCount,
-      player: 'Bot',
+      player: 'bot',
       columnIndex: column,
       rowIndex: result.row
     });
@@ -451,7 +451,7 @@ class GameManager {
       gameStatus: game.gameLogic.gameStatus,
       winner: game.gameLogic.winner === 1 ? game.player1 : game.gameLogic.winner === 2 ? game.player2 : null,
       winningCells: game.gameLogic.winningCells,
-      lastMove: { player: 'Bot', column, row: result.row },
+      lastMove: { player: 'bot', column, row: result.row },
       moveCount: game.moveCount
     });
 
@@ -472,14 +472,14 @@ class GameManager {
     const durationSeconds = Math.floor((endTime - game.startTime) / 1000);
 
     // Update user statistics
-    if (game.player1 !== 'Bot') {
+    if (game.player1 !== 'bot') {
       await this.database.updateUserStats(game.player1, {
         gameStatus: game.gameLogic.gameStatus,
         winner: game.gameLogic.winner
       });
     }
     
-    if (game.player2 !== 'Bot') {
+    if (game.player2 !== 'bot') {
       await this.database.updateUserStats(game.player2, {
         gameStatus: game.gameLogic.gameStatus,
         winner: game.gameLogic.winner
@@ -514,7 +514,7 @@ class GameManager {
 
     // Clean up playerSockets and socketPlayers for both players if not in another active game
     const removePlayerMappings = (username) => {
-      if (!username || username === 'Bot') return;
+      if (!username || username === 'bot') return;
       const socketId = this.playerSockets.get(username);
       if (!socketId) return;
       // Check if this user is in any other active game
