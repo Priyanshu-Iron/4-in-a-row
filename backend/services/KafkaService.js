@@ -1,59 +1,17 @@
 require('dotenv').config();
 const { Kafka } = require('kafkajs');
 const config = require('../config');
-const path = require('path');
 
 class KafkaService {
   constructor() {
     const fs = require('fs');
 
-    let sslOptions = false;
-    
-    if (config.kafka.ssl === 'true') {
-      try {
-        // Try to resolve certificate paths
-        const caPath = path.resolve(config.kafka.sslCa);
-        const certPath = config.kafka.sslCert ? path.resolve(config.kafka.sslCert) : undefined;
-        const keyPath = config.kafka.sslKey ? path.resolve(config.kafka.sslKey) : undefined;
-
-        console.log('🔐 SSL Certificate paths:');
-        console.log('  CA:', caPath);
-        console.log('  Cert:', certPath);
-        console.log('  Key:', keyPath);
-
-        // Check if files exist
-        if (!fs.existsSync(caPath)) {
-          throw new Error(`CA certificate not found at: ${caPath}`);
-        }
-        if (certPath && !fs.existsSync(certPath)) {
-          throw new Error(`Client certificate not found at: ${certPath}`);
-        }
-        if (keyPath && !fs.existsSync(keyPath)) {
-          throw new Error(`Client key not found at: ${keyPath}`);
-        }
-
-        sslOptions = {
-          rejectUnauthorized: true,
-          ca: [fs.readFileSync(caPath, 'utf-8')],
-          cert: certPath ? fs.readFileSync(certPath, 'utf-8') : undefined,
-          key: keyPath ? fs.readFileSync(keyPath, 'utf-8') : undefined
-        };
-
-        console.log('✅ SSL certificates loaded successfully');
-      } catch (error) {
-        console.error('❌ SSL certificate loading failed:', error.message);
-        console.log('📁 Current working directory:', process.cwd());
-        console.log('📁 Available files in certs directory:');
-        try {
-          const certsDir = path.resolve('./certs');
-          const files = fs.readdirSync(certsDir);
-          files.forEach(file => console.log(`  - ${file}`));
-        } catch (dirError) {
-          console.log('  Directory not found or not accessible');
-        }
-        throw error;
-      }
-    }
+    const sslOptions = (config.kafka.ssl === 'true') ? {
+      rejectUnauthorized: true,
+      ca: [fs.readFileSync(config.kafka.sslCa, 'utf-8')],
+      key: config.kafka.sslKey ? fs.readFileSync(config.kafka.sslKey, 'utf-8') : undefined,
+      cert: config.kafka.sslCert ? fs.readFileSync(config.kafka.sslCert, 'utf-8') : undefined
+    } : false;
 
     const saslOptions = (config.kafka.saslMechanism && config.kafka.saslUsername && config.kafka.saslPassword) ? {
       mechanism: config.kafka.saslMechanism,
@@ -61,37 +19,23 @@ class KafkaService {
       password: config.kafka.saslPassword
     } : undefined;
 
-    console.log('🔧 Kafka configuration:');
-    console.log('  Broker:', config.kafka.broker);
-    console.log('  Client ID:', config.kafka.clientId);
-    console.log('  SSL enabled:', config.kafka.ssl === 'true');
-    console.log('  SASL enabled:', !!saslOptions);
-
     this.kafka = new Kafka({
       clientId: config.kafka.clientId,
       brokers: [config.kafka.broker],
       ssl: sslOptions,
       sasl: saslOptions,
       retry: {
-        initialRetryTime: 300,
-        retries: 10,
-        maxRetryTime: 30000,
-        restartOnFailure: async () => true
-      },
-      requestTimeout: 30000,
-      connectionTimeout: 10000
+        initialRetryTime: 100,
+        retries: 8
+      }
     });
 
-    this.producer = this.kafka.producer({
-      allowAutoTopicCreation: false,
-      transactionTimeout: 30000
-    });
-    
+
+    this.producer = this.kafka.producer();
     this.consumer = this.kafka.consumer({ 
       groupId: 'analytics-group',
       sessionTimeout: 30000,
-      heartbeatInterval: 3000,
-      allowAutoTopicCreation: false
+      heartbeatInterval: 3000
     });
     
     this.connected = false;
@@ -107,19 +51,13 @@ class KafkaService {
 
   async connect() {
     try {
-      console.log('🔄 Connecting to Kafka...');
-      
       await this.producer.connect();
-      console.log('✅ Kafka producer connected');
-      
       await this.consumer.connect();
-      console.log('✅ Kafka consumer connected');
       
       // Subscribe to both game and user event topics
       await this.consumer.subscribe({ 
         topics: [config.kafka.gameEventsTopic, config.kafka.userEventsTopic]
       });
-      console.log('✅ Subscribed to topics:', [config.kafka.gameEventsTopic, config.kafka.userEventsTopic]);
       
       this.connected = true;
       console.log('✅ Kafka connected successfully');
@@ -129,11 +67,7 @@ class KafkaService {
       
     } catch (error) {
       console.error('❌ Kafka connection failed:', error.message);
-      console.error('📄 Full error:', error);
       console.log('ℹ️  Make sure Kafka is running on', config.kafka.broker);
-      
-      // Don't throw the error, let the application continue without Kafka
-      this.connected = false;
     }
   }
 
@@ -439,4 +373,4 @@ class KafkaService {
   }
 }
 
-module.exports = KafkaService;
+module.exports = KafkaService; 
