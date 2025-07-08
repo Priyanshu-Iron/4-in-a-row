@@ -65,7 +65,7 @@ class Database {
       const normalized = username.trim().toLowerCase();
       const user = await User.findOneAndUpdate(
         { username: normalized },
-        { updated_at: new Date() },
+        { username: normalized, updated_at: new Date() }, // Ensure username is always stored normalized
         { upsert: true, new: true }
       );
       return user;
@@ -93,7 +93,8 @@ class Database {
       const normalizedWinner = winner ? winner.trim().toLowerCase() : null;
       const updateData = {
         $inc: { games_played: 1 },
-        updated_at: new Date()
+        updated_at: new Date(),
+        username: normalized // Always set username to normalized value
       };
       if (gameStatus === 'won') {
         if (normalizedWinner === normalized) {
@@ -104,6 +105,7 @@ class Database {
       } else if (gameStatus === 'draw') {
         updateData.$inc.games_drawn = 1;
       }
+      console.log('[updateUserStats] Updating user:', normalized, updateData);
       const user = await User.findOneAndUpdate(
         { username: normalized },
         updateData,
@@ -292,4 +294,4 @@ class Database {
   }
 }
 
-module.exports = Database; 
+module.exports = Database;

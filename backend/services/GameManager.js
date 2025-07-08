@@ -536,17 +536,23 @@ class GameManager {
     // Update user statistics
     let player1Stats = null;
     let player2Stats = null;
+    const winnerUsername =
+      game.gameLogic.winner === 1
+        ? game.player1
+        : game.gameLogic.winner === 2
+        ? game.player2
+        : null;
     if (game.player1 !== 'bot') {
       player1Stats = await this.database.updateUserStats(game.player1, {
         gameStatus: game.gameLogic.gameStatus,
-        winner: game.gameLogic.winner
+        winner: winnerUsername
       });
     }
     
     if (game.player2 !== 'bot') {
       player2Stats = await this.database.updateUserStats(game.player2, {
         gameStatus: game.gameLogic.gameStatus,
-        winner: game.gameLogic.winner
+        winner: winnerUsername
       });
     }
 
