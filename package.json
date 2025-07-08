@@ -12,10 +12,20 @@
     "frontend:build": "cd frontend && npm run build",
     "start": "npm run backend:start"
   },
-  "keywords": ["connect-four", "multiplayer", "websocket", "kafka", "react", "nodejs"],
+  "keywords": [
+    "connect-four",
+    "multiplayer",
+    "websocket",
+    "kafka",
+    "react",
+    "nodejs"
+  ],
   "author": "Connect4 Team",
   "license": "MIT",
   "devDependencies": {
-    "concurrently": "^7.6.0"
+    "@tailwindcss/postcss": "^4.1.11",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^7.6.0",
+    "tailwindcss": "^4.1.11"
   }
-} 
+}
