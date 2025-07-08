@@ -7,11 +7,12 @@ class KafkaService {
     const fs = require('fs');
 
     const sslOptions = (config.kafka.ssl === 'true') ? {
-      rejectUnauthorized: true,
-      ca: [fs.readFileSync(config.kafka.sslCa, 'utf-8')],
-      key: config.kafka.sslKey ? fs.readFileSync(config.kafka.sslKey, 'utf-8') : undefined,
-      cert: config.kafka.sslCert ? fs.readFileSync(config.kafka.sslCert, 'utf-8') : undefined
-    } : false;
+    rejectUnauthorized: true,
+    ca: [process.env.KAFKA_SSL_CA],
+    key: process.env.KAFKA_SSL_KEY || undefined,
+    cert: process.env.KAFKA_SSL_CERT || undefined
+  } : false;
+
 
     const saslOptions = (config.kafka.saslMechanism && config.kafka.saslUsername && config.kafka.saslPassword) ? {
       mechanism: config.kafka.saslMechanism,
