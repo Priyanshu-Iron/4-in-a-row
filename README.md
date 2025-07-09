@@ -417,10 +417,6 @@ cd frontend && npm test
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👥 Authors
-
-- **Connect4 Team** - Initial development - [GitHub](https://github.com/connect4-multiplayer)
-
 ## 🙏 Acknowledgments
 
 - Inspired by the classic Connect Four game
@@ -438,4 +434,4 @@ If you have any questions or need help:
 
 **Happy Gaming! 🎮**
 
-*Built with ❤️ using Node.js, React, PostgreSQL, and Kafka*
+*Built with ❤️ using Node.js, React, MongoDB, and Kafka*
