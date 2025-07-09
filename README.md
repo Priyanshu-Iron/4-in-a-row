@@ -28,7 +28,7 @@ A real-time multiplayer **4-in-a-Row** (Connect Four) game with competitive AI, 
 
 ## 🎮 Live Demo
 
-[**Play Now**]([https://fourinarow-game.vercel.app](https://four-in-a-row-1-we1f.onrender.com/)) - *Live deployment available*
+[**Play Now**](https://four-in-a-row-1-we1f.onrender.com/) - *Live deployment available*
 
 ## 🚀 Features
 
