@@ -1,5 +1,29 @@
 # 4-in-a-Row Game
 
+---
+
+## 📚 Assignment Project for Internship Application
+
+This project was developed as part of my application process to secure an engineering internship. The goal was to design and implement a real-time, backend-driven version of the classic game 4 in a Row (Connect Four), supporting both player-vs-player and player-vs-bot gameplay, with real-time features and persistent storage.
+
+### 📝 Assignment Brief
+- **Game Objective:** Build a real-time, backend-driven version of the classic game 4 in a Row, playable between two players or a competitive bot.
+- **Gameplay Requirements:** Players take turns dropping discs into a 7x6 grid, aiming to connect four discs vertically, horizontally, or diagonally to win.
+- **Technical Requirements:** Develop a multiplayer game server using Node.js or GoLang, implement player matchmaking with a competitive bot fallback, and use WebSockets for real-time gameplay.
+- **Gameplay Features:** Real-time updates, 30-second reconnection window, and a leaderboard.
+- **Frontend Requirements:** A basic frontend with a 7x6 grid, username input, disc dropping, real-time opponent moves, result display, and leaderboard.
+- **Backend Requirements:** In-memory game state, persistent storage for completed games, and optional Kafka integration for analytics.
+
+---
+
+## 🌐 Live Game URL
+
+**Play the deployed game here:** [https://four-in-a-row-1-we1f.onrender.com/](https://four-in-a-row-1-we1f.onrender.com/)
+
+> Both backend and frontend are deployed on Render.com for seamless real-time gameplay and demonstration.
+
+# 4-in-a-Row Game
+
 A real-time multiplayer **4-in-a-Row** (Connect Four) game with competitive AI, built using the MERN stack with advanced features including Kafka analytics, MongoDB persistence, and WebSocket real-time gameplay.
 
 ## 🎮 Live Demo
@@ -179,12 +203,16 @@ This will start:
 
 ## 🎯 How to Play
 
-1. **Enter Username**: Choose a unique username to join the game
-2. **Matchmaking**: Wait for an opponent (max 10 seconds)
-3. **Bot Fallback**: If no player joins, you'll play against our competitive AI
-4. **Make Moves**: Click on columns to drop your discs
-5. **Win Condition**: Connect 4 discs horizontally, vertically, or diagonally
-6. **Reconnection**: If disconnected, you have 30 seconds to reconnect
+1. **Open the Game:** Go to [https://four-in-a-row-1-we1f.onrender.com/](https://four-in-a-row-1-we1f.onrender.com/)
+2. **Enter Username:** Type a unique username to join the game lobby.
+3. **Matchmaking:** Wait for an opponent to join (up to 10 seconds). If no player joins, you will be matched with a competitive AI bot.
+4. **Gameplay:**
+   - Click on any column in the 7x6 grid to drop your disc.
+   - Players take turns dropping discs.
+   - The goal is to connect four of your discs vertically, horizontally, or diagonally before your opponent.
+5. **Winning:** The first player to connect four discs in a row wins. If the board fills up with no winner, the game is a draw.
+6. **Reconnection:** If you disconnect, you have 30 seconds to reconnect and resume your game.
+7. **Leaderboard:** View the leaderboard to see top players and your stats.
 
 ## 🤖 AI Bot Features
 
@@ -410,4 +438,4 @@ If you have any questions or need help:
 
 **Happy Gaming! 🎮**
 
-*Built with ❤️ using Node.js, React, PostgreSQL, and Kafka* 
+*Built with ❤️ using Node.js, React, PostgreSQL, and Kafka*
